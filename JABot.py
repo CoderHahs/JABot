@@ -8,25 +8,49 @@ creates a secure connection with Gmail’s SMTP server, using the SMTP_SSL()
 of smtplib to initiate a TLS-encrypted connection. The default context of ssl validates the host name and its certificates and optimizes the security of the connection. 
 '''
 
-import smtplib, ssl
-from email.mime.text import MIMEText
+import email, smtplib, ssl
+from email import encoders
+from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 import getpass #secure password input
-import xlrd
+import xlrd # excel manipulations
+from datetime import datetime 
+import openpyxl
 
 port = 465  # For SSL
-sender_email = "hrithikshah00@gmail.com"
-password = getpass.getpass("Type your password and press enter: ")
-receiver_email = input("Type the email you want to send an email to: ")
+# open book
+book = xlrd.open_workbook("recruiters.xlsx")
+sh = book.sheet_by_index(0)
 
-message = MIMEMultipart("alternative")
+sender_email = "hrithikshah00@gmail.com"
+#password = getpass.getpass("Type your password and press enter: ")
+print ("Starting emailing....")
+receiver_email = str(sh.cell_value(rowx=1, colx=4))
+
+# message stuff
+message = MIMEMultipart()
 message["Subject"] = "Application for Co-op Position"
 message["From"] = sender_email
 message["To"] = receiver_email
 
+# who to send a message to
+firstName = str(sh.cell_value(rowx=1, colx=0))
+lastName = str(sh.cell_value(rowx=1, colx=1))
+prefix = str(sh.cell_value(rowx=1, colx=2))
+company = str(sh.cell_value(rowx=1, colx=3))
+
+'''# updating excel sheet
+wb = openpyxl.load_workbook(filename = 'recruiters.xlsx')
+ws = wb.worksheets[0]
+ws.cell(row=2, column=6).value = "Emailed"
+ws.cell(row=2, column=7).value = datetime.now()
+wb.save("recruiters.xlsx")'''
+
+
 text = """\
 
-Dear FirstName LastName
+Dear """+ prefix + " " + firstName + " " + lastName+ """
 
 I hope you have had a wonderful start to the new year!
 
@@ -60,7 +84,7 @@ html = """\
    <div id=":16v" class="ii gt">
       <div id=":16w" class="a3s aXjCH ">
          <div dir="ltr">
-            <p class="MsoNormal" style="margin:0cm 0cm 0.0001pt;line-height:normal;font-size:11pt;font-family:Calibri,sans-serif"><span style="font-family:&quot;Calibri Light&quot;,sans-serif;font-size:11pt">Dear FirstName LastName,</span><br></p>
+            <p class="MsoNormal" style="margin:0cm 0cm 0.0001pt;line-height:normal;font-size:11pt;font-family:Calibri,sans-serif"><span style="font-family:&quot;Calibri Light&quot;,sans-serif;font-size:11pt">Dear """+ prefix + " "+firstName + " " + lastName+""",</span><br></p>
             <p class="MsoNormal" style="margin:0cm 0cm 0.0001pt;line-height:normal;font-size:11pt;font-family:Calibri,sans-serif"><span style="font-family:&quot;Calibri Light&quot;,sans-serif">&nbsp;</span></p>
             <p class="MsoNormal" style="margin:0cm 0cm 0.0001pt;line-height:normal;font-size:11pt;font-family:Calibri,sans-serif"><span style="font-family:&quot;Calibri Light&quot;,sans-serif">I hope you have had a wonderful start to the new year!</span></p>
             <p class="MsoNormal" style="margin:0cm 0cm 0.0001pt;line-height:normal;font-size:11pt;font-family:Calibri,sans-serif"><span style="font-family:&quot;Calibri Light&quot;,sans-serif">&nbsp;</span></p>
@@ -150,11 +174,33 @@ message.attach(part1)
 message.attach(part2)
 
 
+filename = "resume.pdf"  # In same directory as script
+
+# Open PDF file in binary mode
+with open(filename, "rb") as attachment:
+    # Add file as application/octet-stream
+    # Email client can usually download this automatically as attachment
+    resume = MIMEBase("application", "octet-stream")
+    resume.set_payload(attachment.read())
+
+# Encode file in ASCII characters to send by email    
+encoders.encode_base64(resume)
+
+# Add header as key/value pair to attachment part
+resume.add_header(
+    "Hrithik Shah resume",
+    f"attachment; filename= {filename}",
+)
+
+# Add attachment to message and convert message to string
+message.attach(resume)
+text = message.as_string()
+
 # Create a secure SSL context
-context = ssl.create_default_context()
+#context = ssl.create_default_context()
 
 with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
     server.login(sender_email, password)
     print ("Successfully logged in!")
-    server.sendmail(sender_email, receiver_email, message.as_string())
-    print ("Email sent!")
+    server.sendmail(sender_email, receiver_email, text)
+    print ("Email sent to "+firstName+ ", " +lastName+ ", " +company+ " with email " +receiver_email+"!")
