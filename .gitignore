@@ -1,6 +1,14 @@
 # Don't track content of these folders
 recruiters.xlsx
 ~$recruiters.xlsx
+unistudents.csv
+resultfortune100.xlsx
+resultfortune100.json
+result2.xlsx
+result.json
+result.csv
+credentials.json
+~$resultfortune100.xlsx
 
 
 # Compiled source #
